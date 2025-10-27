@@ -1,37 +1,30 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from './supabase/database.types'
 
-// Create a single supabase client for interacting with your database
-// This ensures consistent auth state across the app
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
-}
-
+// Single supabase client instance for the entire app
+// This client handles cookies properly for session persistence
 export const supabase = createBrowserClient<Database>(
-  supabaseUrl,
-  supabaseAnonKey,
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      storage: {
-        getItem: (key: string) => {
-          if (typeof window === 'undefined') return null
-          return window.localStorage.getItem(key)
-        },
-        setItem: (key: string, value: string) => {
-          if (typeof window === 'undefined') return
-          window.localStorage.setItem(key, value)
-        },
-        removeItem: (key: string) => {
-          if (typeof window === 'undefined') return
-          window.localStorage.removeItem(key)
-        }
-      }
-    }
+    cookies: {
+      get(name: string) {
+        if (typeof document === 'undefined') return ''
+        const value = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)')
+        return value ? decodeURIComponent(value[2]) : ''
+      },
+      set(name: string, value: string, options?: any) {
+        if (typeof document === 'undefined') return
+        let str = `${name}=${encodeURIComponent(value)}`
+        if (options?.maxAge) str += `; Max-Age=${options.maxAge}`
+        if (options?.path) str += `; Path=${options.path}`
+        str += '; SameSite=Lax; Secure'
+        document.cookie = str
+      },
+      remove(name: string) {
+        if (typeof document === 'undefined') return
+        document.cookie = `${name}=; Max-Age=0; Path=/`
+      },
+    },
   }
 )

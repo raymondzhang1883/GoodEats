@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api'
 import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
-import { Calendar, MapPin, Users, ChefHat } from 'lucide-react'
+import { Calendar, MapPin, Users, ChefHat, Loader2, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 
 const mapContainerStyle = {
@@ -58,7 +58,7 @@ export default function EventMap() {
   const [events, setEvents] = useState<Event[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [userLocation, setUserLocation] = useState(defaultCenter)
-  // Using global supabase instance
+  const [eventsLoading, setEventsLoading] = useState(true)
 
   useEffect(() => {
     // Get user's location
@@ -93,17 +93,26 @@ export default function EventMap() {
   }, [])
 
   const fetchEvents = async () => {
-    const { data, error } = await supabase
-      .from('events')
-      .select(`
-        *,
-        host:users!host_id(username, avatar_url)
-      `)
-      .gte('date', new Date().toISOString().split('T')[0])
-      .order('date', { ascending: true })
+    try {
+      setEventsLoading(true)
+      const { data, error } = await supabase
+        .from('events')
+        .select(`
+          *,
+          host:users!host_id(username, avatar_url)
+        `)
+        .gte('date', new Date().toISOString().split('T')[0])
+        .order('date', { ascending: true })
 
-    if (!error && data) {
-      setEvents(data as any)
+      if (error) {
+        console.error('Error fetching events:', error)
+      } else if (data) {
+        setEvents(data as any)
+      }
+    } catch (err) {
+      console.error('Failed to fetch events:', err)
+    } finally {
+      setEventsLoading(false)
     }
   }
 
@@ -118,14 +127,38 @@ export default function EventMap() {
     return icons[eventType] || '🎉'
   }
 
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+
+  console.log('EventMap rendering with API key:', apiKey ? 'Present' : 'Missing')
+  console.log('Events count:', events.length)
+  console.log('User location:', userLocation)
+
+  if (!apiKey) {
+    return (
+      <div className="relative h-full w-full flex items-center justify-center bg-gray-100">
+        <div className="text-center max-w-md px-4">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Configuration Error</h3>
+          <p className="text-gray-600 mb-4">Google Maps API key is missing</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative h-full w-full">
-      <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
+      <LoadScript 
+        googleMapsApiKey={apiKey}
+        onLoad={() => console.log('Google Maps script loaded successfully')}
+        onError={(err) => console.error('Google Maps script failed to load:', err)}
+      >
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={userLocation}
           zoom={13}
           options={mapOptions}
+          onLoad={() => console.log('Google Map component loaded')}
+          onUnmount={() => console.log('Google Map component unmounted')}
         >
           {events.map((event) => (
             <Marker
@@ -206,8 +239,18 @@ export default function EventMap() {
         <div className="px-4 pb-safe-bottom">
           <h2 className="text-lg font-bold mb-4">Upcoming Events</h2>
 
-          <div className="space-y-3 max-h-80 overflow-y-auto pb-4">
-            {events.map((event) => (
+          {eventsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary-500" />
+            </div>
+          ) : events.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No upcoming events found</p>
+              <p className="text-sm text-gray-400 mt-2">Be the first to create one!</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-80 overflow-y-auto pb-4">
+              {events.map((event) => (
               <motion.div
                 key={event.id}
                 whileTap={{ scale: 0.98 }}
@@ -232,8 +275,9 @@ export default function EventMap() {
                   </div>
                 </div>
               </motion.div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </motion.div>
     </div>

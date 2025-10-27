@@ -22,18 +22,13 @@ export default function AuthForm() {
 
     try {
       if (isLogin) {
-        console.log('Attempting login with email:', email)
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
 
-        if (error) {
-          console.error('Login error:', error)
-          throw error
-        }
+        if (error) throw error
 
-        console.log('Login successful:', data)
         toast.success('Welcome back!')
         router.push('/home')
       } else {
@@ -63,14 +58,12 @@ export default function AuthForm() {
                 full_name: fullName,
               })
 
-            // Only show error if it's not a duplicate key error
+            // Ignore duplicate key errors - trigger may have already created it
             if (profileError && !profileError.message.includes('duplicate')) {
-              console.warn('Profile creation:', profileError.message)
-              // Don't throw - the trigger may have already created it
+              // Don't throw - profile creation might be handled by trigger
             }
           } catch (err) {
-            // Profile might have been created by trigger
-            console.log('Profile handled by trigger')
+            // Profile might have been created by trigger - that's ok
           }
         }
 

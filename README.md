@@ -2,98 +2,140 @@
 
 A social platform that brings people together through the joy of food. Connect with your community through potlucks, cooking classes, and shared meals.
 
-## Features
+## 🚀 Quick Start
 
-- 📍 **Map-Based Event Discovery** - Find food events happening near you
-- 🎉 **Event Hosting & RSVP** - Create and join community food events
-- 👥 **Social Profiles & Friends** - Build connections over shared meals
-- 🍳 **Shared Meal Planning** - Coordinate dishes for potlucks
-- 📸 **Community Feed** - Share photos and memories from events
-- 📅 **Calendar Integration** - Never miss a food event
+### Prerequisites
+- Node.js 18+
+- Supabase account
+- Google Maps API key (optional for development)
 
-## Quick Setup
+### Installation
 
-### 1. Install Dependencies
+1. **Clone the repository**
+```bash
+git clone https://github.com/yourusername/goodeats.git
+cd goodeats
+```
 
+2. **Install dependencies**
 ```bash
 npm install
 ```
 
-### 2. Set Up Supabase
+3. **Set up Supabase**
+   - Create a new project at [supabase.com](https://supabase.com)
+   - Run the SQL from `/supabase/schema.sql` in the SQL Editor
+   - Run the trigger function from `/supabase/create-user-function.sql`
 
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Go to SQL Editor and run the schema from `supabase/schema.sql`
-3. Get your project URL and anon key from Project Settings > API
-
-### 3. Configure Environment Variables
-
-Create a `.env.local` file:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+4. **Configure environment variables**
+```bash
+cp .env.local.example .env.local
+```
+Add your credentials:
+```
+NEXT_PUBLIC_SUPABASE_URL=your_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_maps_key (optional)
 ```
 
-### 4. Run the Development Server
-
+5. **Run the development server**
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see the app!
 
-## Tech Stack
+## 📱 Features
+
+### Core Functionality
+- **📍 Map-Based Event Discovery** - Find food events near you
+- **🎉 Event Hosting & RSVP** - Create and join community meals
+- **👥 User Profiles** - Dietary preferences and social connections
+- **🍳 Meal Planning** - Coordinate dishes for potlucks
+- **📸 Community Feed** - Share photos and memories
+- **📅 Calendar View** - Track upcoming events
+
+### Technical Features
+- Mobile-first responsive design
+- Real-time updates with Supabase
+- Row Level Security for data protection
+- Automatic session persistence
+- Progressive Web App capabilities
+
+## 🏗️ Project Structure
+
+```
+/
+├── app/                # Next.js 14 app directory
+│   ├── (auth)/        # Authentication pages
+│   ├── home/          # Main map view
+│   ├── events/        # Event pages
+│   ├── profile/       # User profile
+│   ├── feed/          # Community feed
+│   └── calendar/      # Calendar view
+├── components/        # Reusable React components
+│   ├── auth/         # Authentication components
+│   ├── layout/       # Layout components
+│   └── map/          # Map components
+├── lib/              # Utilities and configs
+│   └── supabase.ts   # Supabase client
+├── supabase/         # Database files
+│   ├── schema.sql    # Main database schema
+│   └── create-user-function.sql
+├── public/           # Static assets
+├── docs/             # Documentation
+└── tests/            # Test files
+```
+
+## 🛠️ Tech Stack
 
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS
 - **Backend**: Supabase (PostgreSQL + Auth)
 - **Maps**: Google Maps API
+- **State**: React Context
+- **Styling**: Tailwind CSS
 - **Animations**: Framer Motion
-- **Forms**: React Hook Form
-- **State**: Zustand
-- **Dates**: date-fns
 
-## Project Structure
+## 📝 Development
 
-```
-/app              # Next.js app router pages
-/components       # Reusable React components
-/lib             # Utilities and configurations
-/public          # Static assets
-/supabase        # Database schema and migrations
+### Running Tests
+```bash
+npm test
 ```
 
-## Mobile-First Design
+### Building for Production
+```bash
+npm run build
+npm start
+```
 
-The app is designed with a mobile-first approach and includes:
-- Progressive Web App capabilities
-- Touch-optimized interactions
-- Bottom navigation for easy thumb access
-- Swipe gestures for better UX
-- Safe area handling for modern devices
+### Database Migrations
+All database changes should be added to `/supabase/schema.sql`
 
-## MVP Features Included
+## 🔒 Security
 
-✅ User authentication (signup/login)
-✅ Event discovery on map
-✅ Event creation and management
-✅ RSVP system with guest counts
-✅ User profiles with dietary preferences
-✅ Community feed for sharing experiences
-✅ Calendar view for event tracking
-✅ Mobile-responsive design
+- Row Level Security (RLS) enabled on all tables
+- Authentication required for protected routes
+- User data isolation through RLS policies
+- Secure session management
 
-## Production Considerations
+## 📚 Documentation
 
-For production deployment, consider:
-- Implementing email verification
-- Adding real geocoding for addresses
-- Setting up push notifications
-- Implementing image uploads to Supabase Storage
-- Adding more robust error handling
-- Implementing rate limiting
-- Adding analytics tracking
+- [Supabase Setup Guide](./docs/SUPABASE_SETUP.md)
+- [Authentication Flow](./docs/AUTH_FIX_SUMMARY.md)
 
-## License
+## 🤝 Contributing
 
-MIT
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🙏 Acknowledgments
+
+Built with ❤️ for the UT Austin community
