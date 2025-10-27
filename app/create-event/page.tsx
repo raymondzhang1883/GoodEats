@@ -45,6 +45,39 @@ export default function CreateEventPage() {
     dietary_options: [] as string[],
   })
 
+  const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number }> => {
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+      if (!apiKey) {
+        throw new Error('Google Maps API key is missing')
+      }
+
+      const encodedAddress = encodeURIComponent(address)
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${apiKey}`
+      )
+      
+      const data = await response.json()
+      
+      if (data.status === 'OK' && data.results && data.results.length > 0) {
+        const location = data.results[0].geometry.location
+        return {
+          lat: location.lat,
+          lng: location.lng
+        }
+      } else if (data.status === 'ZERO_RESULTS') {
+        throw new Error('Address not found. Please check and try again.')
+      } else if (data.status === 'REQUEST_DENIED') {
+        throw new Error('Geocoding failed: API key issue')
+      } else {
+        throw new Error('Could not find location for this address')
+      }
+    } catch (error: any) {
+      console.error('Geocoding error:', error)
+      throw error
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -54,12 +87,16 @@ export default function CreateEventPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // For MVP, use default coordinates (would use Google Geocoding API in production)
+      // Geocode the address to get real coordinates
+      toast.loading('Finding location on map...', { id: 'geocoding' })
+      const coords = await geocodeAddress(formData.location_address)
+      toast.dismiss('geocoding')
+
       const eventData = {
         ...formData,
         host_id: user.id,
-        latitude: 37.7749 + (Math.random() - 0.5) * 0.1,
-        longitude: -122.4194 + (Math.random() - 0.5) * 0.1,
+        latitude: coords.lat,
+        longitude: coords.lng,
         price: formData.is_free ? 0 : formData.price,
         dietary_options: formData.dietary_options.length > 0 ? formData.dietary_options : null,
       }
@@ -224,8 +261,11 @@ export default function CreateEventPage() {
               value={formData.location_address}
               onChange={(e) => setFormData({ ...formData, location_address: e.target.value })}
               className="input"
-              placeholder="123 Main St, San Francisco, CA 94102"
+              placeholder="123 Main St, Austin, TX 78701"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Include street address, city, and state for accurate map placement
+            </p>
           </div>
         </div>
 
