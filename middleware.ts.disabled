@@ -1,0 +1,24 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { createBrowserClient } from '@supabase/ssr'
+
+export function middleware(request: NextRequest) {
+  const res = NextResponse.next()
+
+  // Protected routes
+  const protectedPaths = ['/home', '/profile', '/feed', '/calendar', '/create-event', '/events']
+  const isProtectedPath = protectedPaths.some(path =>
+    request.nextUrl.pathname.startsWith(path)
+  )
+
+  // For MVP, we'll allow all access
+  // In production, you'd check for valid session here
+
+  return res
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+}
