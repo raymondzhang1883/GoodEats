@@ -182,6 +182,9 @@ export default function EventDetailsPage() {
   const isHost = currentUser?.id === event.host.id
   const isFull = event.current_attendees >= event.max_attendees
   const attendingUsers = event.rsvps.filter(r => r.status === 'attending')
+  
+  // Calculate total guests (including +1s, +2s, etc.)
+  const totalAttendingGuests = attendingUsers.reduce((sum, rsvp) => sum + (rsvp.guests_count || 1), 0)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -350,7 +353,9 @@ export default function EventDetailsPage() {
 
         {/* Attendees */}
         <div className="card p-6">
-          <h2 className="font-semibold mb-4">Who's Coming ({attendingUsers.length})</h2>
+          <h2 className="font-semibold mb-4">
+            Who's Coming ({totalAttendingGuests} {totalAttendingGuests === 1 ? 'guest' : 'guests'})
+          </h2>
           {attendingUsers.length > 0 ? (
             <div className="space-y-3">
               {attendingUsers.map((rsvp) => (

@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'react-hot-toast'
 import { format } from 'date-fns'
-import { Heart, MessageCircle, Share2, Camera, Loader2, Plus } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Loader2, Plus, Send, X } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 type Post = {
   id: string
@@ -26,20 +26,25 @@ type Post = {
   comments: {
     id: string
     content: string
+    created_at: string
     user: {
       username: string
+      full_name: string
     }
   }[]
+  user_has_liked?: boolean
 }
 
 export default function FeedPage() {
-  // Using global supabase instance
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [newPost, setNewPost] = useState('')
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [posting, setPosting] = useState(false)
+  const [commentingOnPost, setCommentingOnPost] = useState<string | null>(null)
+  const [newComment, setNewComment] = useState('')
+  const [commenting, setCommenting] = useState(false)
 
   useEffect(() => {
     fetchPosts()
@@ -60,6 +65,8 @@ export default function FeedPage() {
 
   const fetchPosts = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
       const { data, error } = await supabase
         .from('posts')
         .select(`
@@ -69,14 +76,33 @@ export default function FeedPage() {
           comments(
             id,
             content,
-            user:users!user_id(username)
+            created_at,
+            user:users!user_id(username, full_name)
           )
         `)
         .order('created_at', { ascending: false })
         .limit(20)
 
       if (error) throw error
-      setPosts(data as any || [])
+
+      // Check which posts the current user has liked
+      if (user) {
+        const { data: likes } = await supabase
+          .from('post_likes')
+          .select('post_id')
+          .eq('user_id', user.id)
+
+        const likedPostIds = new Set(likes?.map(l => l.post_id) || [])
+        
+        const postsWithLikes = (data || []).map(post => ({
+          ...post,
+          user_has_liked: likedPostIds.has(post.id)
+        }))
+        
+        setPosts(postsWithLikes as any)
+      } else {
+        setPosts(data as any || [])
+      }
     } catch (error: any) {
       toast.error('Failed to load feed')
     } finally {
@@ -122,26 +148,115 @@ export default function FeedPage() {
       return
     }
 
+    const post = posts.find(p => p.id === postId)
+    if (!post) return
+
+    const isLiked = post.user_has_liked
+
     // Optimistic update
-    setPosts(posts.map(post =>
-      post.id === postId
-        ? { ...post, likes_count: post.likes_count + 1 }
-        : post
+    setPosts(posts.map(p =>
+      p.id === postId
+        ? { 
+            ...p, 
+            likes_count: isLiked ? p.likes_count - 1 : p.likes_count + 1,
+            user_has_liked: !isLiked
+          }
+        : p
     ))
 
-    const { error } = await supabase
-      .from('posts')
-      .update({ likes_count: posts.find(p => p.id === postId)!.likes_count + 1 })
-      .eq('id', postId)
+    try {
+      if (isLiked) {
+        // Unlike
+        const { error } = await supabase
+          .from('post_likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', currentUser.id)
 
-    if (error) {
+        if (error) throw error
+      } else {
+        // Like
+        const { error } = await supabase
+          .from('post_likes')
+          .insert({
+            post_id: postId,
+            user_id: currentUser.id
+          })
+
+        if (error) throw error
+      }
+    } catch (error: any) {
       // Revert on error
+      setPosts(posts.map(p =>
+        p.id === postId
+          ? { 
+              ...p, 
+              likes_count: isLiked ? p.likes_count + 1 : p.likes_count - 1,
+              user_has_liked: isLiked
+            }
+          : p
+      ))
+      
+      if (error.message?.includes('duplicate')) {
+        toast.error('You already liked this post')
+      } else {
+        toast.error('Failed to update like')
+      }
+    }
+  }
+
+  const handleComment = async (postId: string) => {
+    if (!currentUser) {
+      toast.error('Please sign in to comment')
+      return
+    }
+
+    if (!newComment.trim()) return
+
+    setCommenting(true)
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .insert({
+          post_id: postId,
+          user_id: currentUser.id,
+          content: newComment.trim()
+        })
+        .select(`
+          id,
+          content,
+          created_at,
+          user:users!user_id(username, full_name)
+        `)
+        .single()
+
+      if (error) throw error
+
+      // Update posts with new comment
       setPosts(posts.map(post =>
         post.id === postId
-          ? { ...post, likes_count: post.likes_count - 1 }
+          ? { ...post, comments: [...post.comments, data as any] }
           : post
       ))
-      toast.error('Failed to like post')
+
+      setNewComment('')
+      setCommentingOnPost(null)
+      toast.success('Comment added!')
+    } catch (error: any) {
+      toast.error('Failed to add comment')
+    } finally {
+      setCommenting(false)
+    }
+  }
+
+  const handleShare = async (postId: string) => {
+    const postUrl = `${window.location.origin}/feed#${postId}`
+    
+    try {
+      await navigator.clipboard.writeText(postUrl)
+      toast.success('Link copied to clipboard!')
+    } catch (error) {
+      toast.error('Failed to copy link')
     }
   }
 
@@ -229,18 +344,28 @@ export default function FeedPage() {
                 <div className="px-4 pb-4 flex items-center justify-between">
                   <button
                     onClick={() => handleLike(post.id)}
-                    className="flex items-center gap-2 text-gray-600 hover:text-red-500 transition-colors"
+                    className={`flex items-center gap-2 transition-colors ${
+                      post.user_has_liked 
+                        ? 'text-red-500' 
+                        : 'text-gray-600 hover:text-red-500'
+                    }`}
                   >
-                    <Heart className="h-5 w-5" />
+                    <Heart className={`h-5 w-5 ${post.user_has_liked ? 'fill-current' : ''}`} />
                     <span className="text-sm">{post.likes_count}</span>
                   </button>
 
-                  <button className="flex items-center gap-2 text-gray-600 hover:text-primary-500 transition-colors">
+                  <button 
+                    onClick={() => setCommentingOnPost(post.id)}
+                    className="flex items-center gap-2 text-gray-600 hover:text-primary-500 transition-colors"
+                  >
                     <MessageCircle className="h-5 w-5" />
                     <span className="text-sm">{post.comments.length}</span>
                   </button>
 
-                  <button className="text-gray-600 hover:text-primary-500 transition-colors">
+                  <button 
+                    onClick={() => handleShare(post.id)}
+                    className="text-gray-600 hover:text-primary-500 transition-colors"
+                  >
                     <Share2 className="h-5 w-5" />
                   </button>
                 </div>
@@ -255,7 +380,10 @@ export default function FeedPage() {
                       </div>
                     ))}
                     {post.comments.length > 2 && (
-                      <button className="text-sm text-primary-500">
+                      <button 
+                        onClick={() => setCommentingOnPost(post.id)}
+                        className="text-sm text-primary-500"
+                      >
                         View all {post.comments.length} comments
                       </button>
                     )}
@@ -299,11 +427,7 @@ export default function FeedPage() {
               autoFocus
             />
 
-            <div className="flex items-center gap-3 mt-4">
-              <button className="p-2 bg-gray-100 rounded-lg">
-                <Camera className="h-5 w-5 text-gray-600" />
-              </button>
-              <div className="flex-1" />
+            <div className="flex items-center gap-3 mt-4 justify-end">
               <button
                 onClick={() => setShowCreatePost(false)}
                 className="btn-secondary px-4 py-2"
@@ -322,6 +446,91 @@ export default function FeedPage() {
           </motion.div>
         </div>
       )}
+
+      {/* Comment Modal */}
+      <AnimatePresence>
+        {commentingOnPost && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center">
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[80vh] flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b">
+                <h2 className="text-xl font-semibold">Comments</h2>
+                <button
+                  onClick={() => {
+                    setCommentingOnPost(null)
+                    setNewComment('')
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Comments List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {posts.find(p => p.id === commentingOnPost)?.comments.map((comment) => (
+                  <div key={comment.id} className="flex gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {comment.user.username[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <div className="bg-gray-100 rounded-lg p-3">
+                        <p className="font-semibold text-sm">{comment.user.full_name}</p>
+                        <p className="text-sm text-gray-600 mt-1">{comment.content}</p>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1 ml-3">
+                        {format(new Date(comment.created_at), 'MMM d, h:mm a')}
+                      </p>
+                    </div>
+                  </div>
+                )) || []}
+
+                {posts.find(p => p.id === commentingOnPost)?.comments.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No comments yet. Be the first!</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Comment Input */}
+              <div className="p-4 border-t">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !commenting && newComment.trim()) {
+                        handleComment(commentingOnPost)
+                      }
+                    }}
+                    placeholder="Write a comment..."
+                    className="flex-1 px-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => handleComment(commentingOnPost)}
+                    disabled={!newComment.trim() || commenting}
+                    className="p-2 bg-primary-500 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-600 transition-colors"
+                  >
+                    {commenting ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Send className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <BottomNav />
     </div>

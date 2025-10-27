@@ -109,6 +109,22 @@ export default function CreateEventPage() {
 
       if (error) throw error
 
+      // Automatically RSVP the host to their own event
+      // This ensures current_attendees starts at 1 (the host)
+      const { error: rsvpError } = await supabase
+        .from('rsvps')
+        .insert({
+          event_id: data.id,
+          user_id: user.id,
+          status: 'attending',
+          guests_count: 1,
+        })
+
+      if (rsvpError) {
+        console.error('Failed to auto-RSVP host:', rsvpError)
+        // Don't fail the whole flow, just log it
+      }
+
       toast.success('Event created successfully!')
       router.push(`/events/${data.id}`)
     } catch (error: any) {
