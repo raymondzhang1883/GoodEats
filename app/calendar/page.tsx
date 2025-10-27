@@ -28,19 +28,20 @@ export default function CalendarPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
 
   useEffect(() => {
-    getCurrentUser()
-    fetchEvents()
+    const loadUserAndEvents = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setCurrentUser(user)
+        await fetchEvents(user.id)
+      } else {
+        setLoading(false)
+      }
+    }
+    loadUserAndEvents()
   }, [currentDate])
 
-  const getCurrentUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      setCurrentUser(user)
-    }
-  }
-
-  const fetchEvents = async () => {
-    if (!currentUser) return
+  const fetchEvents = async (userId: string) => {
+    if (!userId) return
 
     try {
       const monthStart = startOfMonth(currentDate)
@@ -50,7 +51,7 @@ export default function CalendarPage() {
       const { data: hostedEvents } = await supabase
         .from('events')
         .select('id, title, event_type, date, time, location_name')
-        .eq('host_id', currentUser.id)
+        .eq('host_id', userId)
         .gte('date', monthStart.toISOString().split('T')[0])
         .lte('date', monthEnd.toISOString().split('T')[0])
 
@@ -60,7 +61,7 @@ export default function CalendarPage() {
         .select(`
           event:events(id, title, event_type, date, time, location_name)
         `)
-        .eq('user_id', currentUser.id)
+        .eq('user_id', userId)
         .eq('status', 'attending')
         .gte('events.date', monthStart.toISOString().split('T')[0])
         .lte('events.date', monthEnd.toISOString().split('T')[0])
