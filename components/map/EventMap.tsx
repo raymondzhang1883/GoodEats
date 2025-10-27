@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api'
+import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api'
 import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import { Calendar, MapPin, Users, ChefHat, Loader2, AlertCircle } from 'lucide-react'
@@ -55,6 +55,10 @@ type Event = {
 }
 
 export default function EventMap() {
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+  })
+
   const [events, setEvents] = useState<Event[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [userLocation, setUserLocation] = useState(defaultCenter)
@@ -127,19 +131,32 @@ export default function EventMap() {
     return icons[eventType] || '🎉'
   }
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  // Show loading state while Maps API loads
+  if (!isLoaded) {
+    return (
+      <div className="relative h-full w-full flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary-500 mx-auto mb-4" />
+          <p className="text-gray-600">Loading map...</p>
+        </div>
+      </div>
+    )
+  }
 
-  console.log('EventMap rendering with API key:', apiKey ? 'Present' : 'Missing')
-  console.log('Events count:', events.length)
-  console.log('User location:', userLocation)
-
-  if (!apiKey) {
+  // Show error if Maps API fails to load
+  if (loadError) {
     return (
       <div className="relative h-full w-full flex items-center justify-center bg-gray-100">
         <div className="text-center max-w-md px-4">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Configuration Error</h3>
-          <p className="text-gray-600 mb-4">Google Maps API key is missing</p>
+          <h3 className="text-lg font-semibold mb-2">Map Loading Error</h3>
+          <p className="text-gray-600 mb-4">Failed to load Google Maps</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="btn-primary"
+          >
+            Retry
+          </button>
         </div>
       </div>
     )
@@ -147,19 +164,12 @@ export default function EventMap() {
 
   return (
     <div className="relative h-full w-full">
-      <LoadScript 
-        googleMapsApiKey={apiKey}
-        onLoad={() => console.log('Google Maps script loaded successfully')}
-        onError={(err) => console.error('Google Maps script failed to load:', err)}
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        center={userLocation}
+        zoom={13}
+        options={mapOptions}
       >
-        <GoogleMap
-          mapContainerStyle={mapContainerStyle}
-          center={userLocation}
-          zoom={13}
-          options={mapOptions}
-          onLoad={() => console.log('Google Map component loaded')}
-          onUnmount={() => console.log('Google Map component unmounted')}
-        >
           {events.map((event) => (
             <Marker
               key={event.id}
@@ -223,7 +233,6 @@ export default function EventMap() {
             </InfoWindow>
           )}
         </GoogleMap>
-      </LoadScript>
 
       {/* Event List Drawer */}
       <motion.div
