@@ -273,10 +273,13 @@ export default function ProfilePage() {
             <div className="text-2xl font-bold">{stats.eventsAttended}</div>
             <div className="text-xs opacity-90">Attended</div>
           </div>
-          <div className="text-center">
+          <button 
+            onClick={() => router.push('/friends')}
+            className="text-center hover:opacity-80 transition-opacity"
+          >
             <div className="text-2xl font-bold">{stats.friends}</div>
             <div className="text-xs opacity-90">Friends</div>
-          </div>
+          </button>
         </div>
       </header>
 
