@@ -27,6 +27,7 @@ type EventDetails = {
   is_free: boolean
   price: number
   dietary_options: string[] | null
+  audience: string
   host: {
     id: string
     username: string
@@ -208,7 +209,18 @@ export default function EventDetailsPage() {
           <div className="flex items-start gap-4">
             <div className="text-4xl">{getEventIcon(event.event_type)}</div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
+              <div className="flex items-center gap-2 mb-2">
+                <h1 className="text-2xl font-bold">{event.title}</h1>
+                {event.audience === 'friends' ? (
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full whitespace-nowrap">
+                    Friends Only
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full whitespace-nowrap">
+                    Public
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>Hosted by</span>
                 <span className="font-medium text-primary-500">@{event.host.username}</span>

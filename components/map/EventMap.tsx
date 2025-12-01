@@ -48,6 +48,7 @@ type Event = {
   meal_theme: string | null
   is_free: boolean
   price: number
+  audience: string
   host: {
     username: string
     avatar_url: string | null
@@ -191,7 +192,18 @@ export default function EventMap() {
               onCloseClick={() => setSelectedEvent(null)}
             >
               <div className="p-4 max-w-xs">
-                <h3 className="font-bold text-lg mb-2">{selectedEvent.title}</h3>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="font-bold text-lg">{selectedEvent.title}</h3>
+                  {selectedEvent.audience === 'friends' ? (
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                      Friends Only
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                      Public
+                    </span>
+                  )}
+                </div>
                 <div className="space-y-2 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
@@ -269,7 +281,18 @@ export default function EventMap() {
                 <div className="flex items-start gap-3">
                   <div className="text-2xl">{getMarkerIcon(event.event_type)}</div>
                   <div className="flex-1">
-                    <h3 className="font-semibold">{event.title}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold">{event.title}</h3>
+                      {event.audience === 'friends' ? (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full whitespace-nowrap">
+                          Friends Only
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full whitespace-nowrap">
+                          Public
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-600 line-clamp-1">
                       {event.description}
                     </p>

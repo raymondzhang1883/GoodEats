@@ -43,6 +43,7 @@ export default function CreateEventPage() {
     is_free: true,
     price: 0,
     dietary_options: [] as string[],
+    audience: 'public',
   })
 
   const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number }> => {
@@ -361,6 +362,37 @@ export default function CreateEventPage() {
                 {option}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Audience */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">Audience</label>
+          <div className="space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                checked={formData.audience === 'public'}
+                onChange={() => setFormData({ ...formData, audience: 'public' })}
+                className="h-4 w-4 text-primary-500"
+              />
+              <div>
+                <div className="font-medium">Public</div>
+                <div className="text-sm text-gray-500">Anyone can see and join this event</div>
+              </div>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                checked={formData.audience === 'friends'}
+                onChange={() => setFormData({ ...formData, audience: 'friends' })}
+                className="h-4 w-4 text-primary-500"
+              />
+              <div>
+                <div className="font-medium">Friends</div>
+                <div className="text-sm text-gray-500">Only your friends can see and join</div>
+              </div>
+            </label>
           </div>
         </div>
 
