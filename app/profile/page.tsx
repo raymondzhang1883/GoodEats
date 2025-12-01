@@ -7,7 +7,7 @@ import { useAuth } from '@/components/auth/AuthProvider'
 import { toast } from 'react-hot-toast'
 import {
   Settings, LogOut, Calendar, Users, ChefHat,
-  Edit, Camera, MapPin, Mail, Loader2
+  Edit, Camera, MapPin, Mail, Loader2, BadgeCheck, Star, Award
 } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 
@@ -242,6 +242,24 @@ export default function ProfilePage() {
               <h2 className="text-xl font-semibold">{user.full_name}</h2>
             )}
             <p className="opacity-90">@{user.username}</p>
+            
+            {/* Verification Badge and Rating */}
+            {!editMode && (
+              <div className="flex items-center gap-3 mt-2">
+                <div className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded-full">
+                  <BadgeCheck className="h-4 w-4" />
+                  <span className="text-xs font-medium">Verified</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 fill-yellow-300 text-yellow-300" />
+                  <span className="text-sm font-medium">Rating: 4.7/5.0</span>
+                </div>
+                <div className="flex items-center gap-1 bg-primary-700 px-2 py-1 rounded-full">
+                  <Award className="h-4 w-4" />
+                  <span className="text-xs font-medium">Superhost II</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -280,6 +298,52 @@ export default function ProfilePage() {
             </p>
           )}
         </div>
+
+        {/* Events Hosted */}
+        {!editMode && (
+          <div className="card p-6">
+            <h3 className="font-semibold mb-4">Events Hosted</h3>
+            <div className="flex flex-col items-center">
+              {/* Circular Progress Bar */}
+              <div className="relative w-48 h-48">
+                <svg className="w-full h-full transform -rotate-90">
+                  {/* Background Circle */}
+                  <circle
+                    cx="96"
+                    cy="96"
+                    r="88"
+                    stroke="#e5e7eb"
+                    strokeWidth="12"
+                    fill="none"
+                  />
+                  {/* Progress Circle */}
+                  <circle
+                    cx="96"
+                    cy="96"
+                    r="88"
+                    stroke="#f97316"
+                    strokeWidth="12"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 88}`}
+                    strokeDashoffset={`${2 * Math.PI * 88 * (1 - 0.7)}`}
+                    strokeLinecap="round"
+                    className="transition-all duration-1000"
+                  />
+                </svg>
+                {/* Center Content */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                  <div className="text-4xl font-bold text-gray-900">7/10</div>
+                  <div className="text-xs text-gray-600">
+                    Host 3 More for
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    Discounted Premium!
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Edit Mode Buttons */}
         {editMode && (
